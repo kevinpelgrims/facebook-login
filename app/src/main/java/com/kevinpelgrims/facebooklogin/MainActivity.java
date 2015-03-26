@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.facebook.Request;
@@ -15,9 +16,11 @@ import com.facebook.model.GraphUser;
 import com.facebook.widget.LoginButton;
 
 public class MainActivity extends ActionBarActivity {
+    private Session fbSession;
     private UiLifecycleHelper uiHelper;
 
     private TextView tokenView, userView;
+    private Button logOutButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,9 +33,9 @@ public class MainActivity extends ActionBarActivity {
 
         tokenView = (TextView) findViewById(R.id.token);
         userView = (TextView) findViewById(R.id.user);
+        logOutButton = (Button) findViewById(R.id.log_out);
 
-        tokenView.setText("Not logged in");
-        userView.setText("No data available");
+        showEmptyData();
 
         LoginButton loginButton = (LoginButton) findViewById(R.id.login);
         loginButton.setReadPermissions("public_profile", "email");
@@ -47,6 +50,13 @@ public class MainActivity extends ActionBarActivity {
                 } else {
                     Session.openActiveSession(MainActivity.this, true, statusCallback);
                 }
+            }
+        });
+
+        logOutButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (fbSession != null) fbSession.closeAndClearTokenInformation();
             }
         });
     }
@@ -79,7 +89,9 @@ public class MainActivity extends ActionBarActivity {
     private Session.StatusCallback statusCallback = new Session.StatusCallback() {
         @Override
         public void call(Session session, SessionState state, Exception e) {
+            fbSession = session;
             if (state.isOpened()) {
+                logOutButton.setVisibility(View.VISIBLE);
                 tokenView.setText(session.getAccessToken());
 
                 Request request = Request.newMeRequest(session, new Request.GraphUserCallback() {
@@ -96,6 +108,18 @@ public class MainActivity extends ActionBarActivity {
                 });
                 request.executeAsync();
             }
+            else if (state.isClosed()) {
+                showEmptyData();
+            }
+            else {
+                logOutButton.setVisibility(View.GONE);
+            }
         }
     };
+
+    private void showEmptyData() {
+        logOutButton.setVisibility(View.GONE);
+        tokenView.setText("Not logged in");
+        userView.setText("No data available");
+    }
 }
