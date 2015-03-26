@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">FacebookLogin</string>
+
+    <string name="action_settings">Settings</string>
+
+    <string name="facebook_app_id">FBAPPID</string>
+</resources>
