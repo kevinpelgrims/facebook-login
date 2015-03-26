@@ -17,6 +17,8 @@ import com.facebook.widget.LoginButton;
 public class MainActivity extends ActionBarActivity {
     private UiLifecycleHelper uiHelper;
 
+    private TextView tokenView, userView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -25,6 +27,12 @@ public class MainActivity extends ActionBarActivity {
         uiHelper.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
+
+        tokenView = (TextView) findViewById(R.id.token);
+        userView = (TextView) findViewById(R.id.user);
+
+        tokenView.setText("Not logged in");
+        userView.setText("No data available");
 
         LoginButton loginButton = (LoginButton) findViewById(R.id.login);
         loginButton.setReadPermissions("public_profile", "email");
@@ -72,7 +80,7 @@ public class MainActivity extends ActionBarActivity {
         @Override
         public void call(Session session, SessionState state, Exception e) {
             if (state.isOpened()) {
-                ((TextView) findViewById(R.id.token)).setText(session.getAccessToken());
+                tokenView.setText(session.getAccessToken());
 
                 Request request = Request.newMeRequest(session, new Request.GraphUserCallback() {
                     @Override
@@ -82,7 +90,7 @@ public class MainActivity extends ActionBarActivity {
                                     user.getFirstName(),
                                     user.getLastName(),
                                     user.getProperty("email") != null ? user.getProperty("email").toString() : "no email");
-                            ((TextView) findViewById(R.id.email)).setText(userString);
+                            userView.setText(userString);
                         }
                     }
                 });
