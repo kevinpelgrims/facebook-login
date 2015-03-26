@@ -78,9 +78,10 @@ public class MainActivity extends ActionBarActivity {
                     @Override
                     public void onCompleted(GraphUser user, Response response) {
                         if (user != null) {
-                            String userString = String.format("%s %s (%s)", user.getFirstName(),
-                                                                            user.getLastName(),
-                                                                            user.getProperty("email") != null ? user.getProperty("email").toString() : "no email");
+                            String userString = String.format("%s%n%s %s%n%s", user.getId(),
+                                    user.getFirstName(),
+                                    user.getLastName(),
+                                    user.getProperty("email") != null ? user.getProperty("email").toString() : "no email");
                             ((TextView) findViewById(R.id.email)).setText(userString);
                         }
                     }
