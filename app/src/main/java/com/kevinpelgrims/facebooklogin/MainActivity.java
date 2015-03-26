@@ -7,16 +7,22 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.facebook.Request;
-import com.facebook.Response;
-import com.facebook.Session;
-import com.facebook.SessionState;
-import com.facebook.UiLifecycleHelper;
-import com.facebook.model.GraphUser;
-import com.facebook.widget.LoginButton;
+import com.facebook.AccessToken;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.FacebookSdk;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
+import com.facebook.login.LoginManager;
+import com.facebook.login.LoginResult;
+import com.facebook.login.widget.LoginButton;
+import com.google.gson.Gson;
+
+import org.json.JSONObject;
 
 public class MainActivity extends ActionBarActivity {
-    private UiLifecycleHelper uiHelper;
+    private CallbackManager callbackManager;
 
     private TextView tokenView, userView;
     private Button logOutButton;
@@ -25,8 +31,8 @@ public class MainActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        uiHelper = new UiLifecycleHelper(this, statusCallback);
-        uiHelper.onCreate(savedInstanceState);
+        FacebookSdk.sdkInitialize(getApplicationContext());
+        callbackManager = CallbackManager.Factory.create();
 
         setContentView(R.layout.activity_main);
 
@@ -38,88 +44,66 @@ public class MainActivity extends ActionBarActivity {
 
         LoginButton loginButton = (LoginButton) findViewById(R.id.login);
         loginButton.setReadPermissions("public_profile", "email");
-        loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Session session = Session.getActiveSession();
-                if (!session.isOpened() && !session.isClosed()) {
-                    session.openForRead(new Session.OpenRequest(MainActivity.this)
-                            .setPermissions("public_profile", "email")
-                            .setCallback(statusCallback));
-                } else {
-                    Session.openActiveSession(MainActivity.this, true, statusCallback);
-                }
-            }
-        });
+        loginButton.registerCallback(callbackManager, fbCallback);
 
         logOutButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Session.getActiveSession() != null) {
-                    Session.getActiveSession().closeAndClearTokenInformation();
-                }
+                LoginManager.getInstance().logOut();
             }
         });
-    }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        uiHelper.onResume();
+        if (AccessToken.getCurrentAccessToken() != null) {
+            getUserFacebookData(AccessToken.getCurrentAccessToken());
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Session.getActiveSession().onActivityResult(MainActivity.this, requestCode, resultCode, data);
-        uiHelper.onActivityResult(requestCode, resultCode, data);
+        callbackManager.onActivityResult(requestCode, resultCode, data);
     }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        uiHelper.onPause();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        uiHelper.onDestroy();
-    }
-
-    private Session.StatusCallback statusCallback = new Session.StatusCallback() {
-        @Override
-        public void call(Session session, SessionState state, Exception e) {
-            if (state.isOpened()) {
-                logOutButton.setVisibility(View.VISIBLE);
-                tokenView.setText(session.getAccessToken());
-
-                Request request = Request.newMeRequest(session, new Request.GraphUserCallback() {
-                    @Override
-                    public void onCompleted(GraphUser user, Response response) {
-                        if (user != null) {
-                            String userString = String.format("%s%n%s %s%n%s", user.getId(),
-                                    user.getFirstName(),
-                                    user.getLastName(),
-                                    user.getProperty("email") != null ? user.getProperty("email").toString() : "no email");
-                            userView.setText(userString);
-                        }
-                    }
-                });
-                request.executeAsync();
-            }
-            else if (state.isClosed()) {
-                showEmptyData();
-            }
-            else {
-                logOutButton.setVisibility(View.GONE);
-            }
-        }
-    };
 
     private void showEmptyData() {
         logOutButton.setVisibility(View.GONE);
         tokenView.setText("Not logged in");
         userView.setText("No data available");
+    }
+
+    private final FacebookCallback<LoginResult> fbCallback = new FacebookCallback<LoginResult>() {
+        @Override
+        public void onSuccess(LoginResult loginResult) {
+            getUserFacebookData(loginResult.getAccessToken());
+        }
+
+        @Override
+        public void onCancel() {
+            userView.setText("You cancelled, what up?");
+        }
+
+        @Override
+        public void onError(FacebookException e) {
+            userView.setText("Something went wrong");
+        }
+    };
+
+    private void getUserFacebookData(final AccessToken accessToken) {
+        GraphRequest request = GraphRequest.newMeRequest(accessToken, new GraphRequest.GraphJSONObjectCallback() {
+            @Override
+            public void onCompleted(JSONObject jsonObject, GraphResponse graphResponse) {
+                tokenView.setText(accessToken.getToken());
+                FacebookUser user = new Gson().fromJson(jsonObject.toString(), FacebookUser.class);
+                String userString = String.format("%s%n%s %s%n%s",
+                    user.getId(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getEmail() != null ? user.getEmail() : "(no email)");
+                userView.setText(userString);
+            }
+        });
+        Bundle parameters = new Bundle();
+        parameters.putString("fields", "id,first_name,last_name,email");
+        request.setParameters(parameters);
+        request.executeAsync();
     }
 }

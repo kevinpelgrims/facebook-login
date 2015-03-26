@@ -10,7 +10,7 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <com.facebook.widget.LoginButton
+    <com.facebook.login.widget.LoginButton
         android:id="@+id/login"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
