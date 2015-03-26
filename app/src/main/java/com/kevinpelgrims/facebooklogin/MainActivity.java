@@ -16,7 +16,6 @@ import com.facebook.model.GraphUser;
 import com.facebook.widget.LoginButton;
 
 public class MainActivity extends ActionBarActivity {
-    private Session fbSession;
     private UiLifecycleHelper uiHelper;
 
     private TextView tokenView, userView;
@@ -56,7 +55,9 @@ public class MainActivity extends ActionBarActivity {
         logOutButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (fbSession != null) fbSession.closeAndClearTokenInformation();
+                if (Session.getActiveSession() != null) {
+                    Session.getActiveSession().closeAndClearTokenInformation();
+                }
             }
         });
     }
@@ -89,7 +90,6 @@ public class MainActivity extends ActionBarActivity {
     private Session.StatusCallback statusCallback = new Session.StatusCallback() {
         @Override
         public void call(Session session, SessionState state, Exception e) {
-            fbSession = session;
             if (state.isOpened()) {
                 logOutButton.setVisibility(View.VISIBLE);
                 tokenView.setText(session.getAccessToken());
